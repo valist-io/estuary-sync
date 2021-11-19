@@ -222,8 +222,7 @@ func streamEstuaryToIPFSNode(client *http.Client, pin Pin) (string, string, erro
 	return ipfsResp.Status, string(ipfsBody), nil
 }
 
-func main() {
-
+func performSync() {
 	client := &http.Client{}
 
 	fmt.Println("Fetching Pin set from Estuary...")
@@ -282,5 +281,18 @@ func main() {
 			fmt.Println(fmt.Sprintf("Warning: Failed to pin %v %v", pin.Cid, err))
 		}
 		fmt.Println(status, res)
+	}
+}
+
+func main() {
+	performSync()
+	if os.Getenv("DISABLE_LOOP") == "" {
+		for {
+			nextTime := time.Now().Truncate(time.Minute)
+			nextTime = nextTime.Add(time.Minute * 30)
+			fmt.Println(fmt.Sprintf("Waiting until %v to run sync...", nextTime))
+			time.Sleep(time.Until(nextTime))
+			performSync()
+		}
 	}
 }
