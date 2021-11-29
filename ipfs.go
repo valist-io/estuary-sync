@@ -76,7 +76,6 @@ func (c *IpfsClient) Import(ctx context.Context, id cid.Cid, ir io.Reader) error
 	// pipe reader will block until content is written to pipe writer
 	// this is how the data is able to be streamed in a routine
 	go func() {
-		defer mw.Close()
 		// create a form file for the multipart data
 		ff, err := mw.CreateFormFile("path", id.String())
 		if err != nil {
@@ -86,9 +85,12 @@ func (c *IpfsClient) Import(ctx context.Context, id cid.Cid, ir io.Reader) error
 		// copy the input data to the form file
 		_, err = io.Copy(ff, ir)
 		if err != nil {
-			pw.CloseWithError(err)	
+			pw.CloseWithError(err)
 			return
 		}
+		// close the pipe channel and multipart writer
+		err = mw.Close()
+		pw.CloseWithError(err)
 	}()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url+"/api/v0/dag/import", pr)
